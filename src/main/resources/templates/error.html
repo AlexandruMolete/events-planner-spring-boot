@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <title>Error page</title>
+        <meta charset="utf-8" />
+    </head>
+    <body th:with="httpStatus=${T(org.springframework.http.HttpStatus).valueOf(#response.status)}">
+    	<h1>Events Planner: Error Page</h1>
+    	<hr>
+        <h2 th:text="|${httpStatus} - ${httpStatus.reasonPhrase}|">404</h2>
+        <p th:utext="${errorMessage}">Error java.lang.NullPointerException</p>
+        <a href="index.html" th:href="@{/index.html}">Back to Login Page</a>
+    </body>
+</html>

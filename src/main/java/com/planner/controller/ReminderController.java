@@ -56,7 +56,7 @@ public class ReminderController {
 		Account currentAccount = currentEvent.getAccount();
 		List<Reminder> theReminders = reminderService.findByEvent(currentEvent);
 		List<ReminderTime> reminderTimes = new ArrayList<>();
-		for (Reminder reminder : theReminders) {
+		theReminders.forEach(reminder -> {
 			LocalTime timer = reminder.getTime();
 			String stringTimer = "";
 			if(timer.getHour()!=0) {
@@ -69,7 +69,7 @@ public class ReminderController {
 				stringTimer = stringTimer+Integer.toString(timer.getSecond())+" seconds(s)";
 			}
 			reminderTimes.add(new ReminderTime(reminder.getId(),stringTimer));
-		}
+		});
 		theModel.addAttribute("currentAccount", currentAccount);
 		theModel.addAttribute("selectedEvent", currentEvent);
 		theModel.addAttribute("reminders", reminderTimes);

@@ -53,27 +53,36 @@ public class EventController {
 	
 	public List<Notification> getUpcomingEventsForCurrentDate(List<Event> theEvents){
 		List<Notification> upcomingEvents = new ArrayList<>();
+		LocalTime currentLocalTime = LocalTime.now();
 		theEvents.stream()
 		 .filter(event -> event.getDate().isEqual(LocalDate.now()))
-		 .filter(event -> event.getTime().isAfter(LocalTime.now()))
+		 .filter(event -> event.getTime().isAfter(currentLocalTime))
 		 .forEach(event -> {
 			 if(!event.getReminders().isEmpty()) {
 				 List<LocalTime> reminderTimes = event.getReminders().stream()
 				 					 			  .map(Reminder::getTime)
 				 					 			  .distinct()
 				 					 			  .collect(Collectors.toList());
+				 int hoursDifference = event.getTime().getHour() - currentLocalTime.getHour();
+				 int minutesDifference = event.getTime().getMinute() - currentLocalTime.getMinute();
+				 int secondsDifference = event.getTime().getSecond() - currentLocalTime.getSecond();
 				 reminderTimes.stream().forEach(reminderTime -> {
+					 
 					 String remainingTime = "";
-					 if((event.getTime().getHour() - LocalTime.now().getHour()) <= reminderTime.getHour()) {
+					 
+					 if(hoursDifference < reminderTime.getHour()) {
 						 remainingTime = remainingTime + Integer.toString(reminderTime.getHour())+" hour(s) ";
 					 }
-					 if((event.getTime().getMinute() - LocalTime.now().getMinute()) <= reminderTime.getMinute()) {
+					 if(minutesDifference < reminderTime.getMinute() && hoursDifference == 0) {
 						 remainingTime = remainingTime + Integer.toString(reminderTime.getMinute())+" minute(s) ";
 					 }
-					 if((event.getTime().getSecond() - LocalTime.now().getSecond()) <= reminderTime.getSecond()) {
+					 if(secondsDifference < reminderTime.getSecond() && hoursDifference == 0 && minutesDifference == 0) {
 						 remainingTime = remainingTime + Integer.toString(reminderTime.getSecond())+" second(s)";
 					 }
-					 upcomingEvents.add(new Notification(event.getEventTitle(),remainingTime));
+					 
+					 if(!remainingTime.isEmpty()) {
+						 upcomingEvents.add(new Notification(event.getEventTitle(),remainingTime));
+					 }
 				 });
 			 }
 		 });
