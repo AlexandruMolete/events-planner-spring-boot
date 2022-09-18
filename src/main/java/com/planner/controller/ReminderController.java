@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.planner.auxiliary.ReminderTime;
-import com.planner.entity.Account;
 import com.planner.entity.Event;
 import com.planner.entity.Reminder;
 import com.planner.form.PlannerReminder;
@@ -53,39 +52,37 @@ public class ReminderController {
 	public String listReminders(@RequestParam("currentEventId") int theEventId, Model theModel) {
 		
 		Event currentEvent = eventService.findById(theEventId);
-		Account currentAccount = currentEvent.getAccount();
 		List<Reminder> theReminders = reminderService.findByEvent(currentEvent);
 		List<ReminderTime> reminderTimes = new ArrayList<>();
 		theReminders.forEach(reminder -> {
 			LocalTime timer = reminder.getTime();
-			String stringTimer = "";
-			if(timer.getHour()!=0) {
-				stringTimer = stringTimer+Integer.toString(timer.getHour())+" hour(s) ";
-			}
-			if(timer.getMinute()!=0) {
-				stringTimer = stringTimer+Integer.toString(timer.getMinute())+" minute(s) ";
-			}
-			if(timer.getSecond()!=0) {
-				stringTimer = stringTimer+Integer.toString(timer.getSecond())+" seconds(s)";
-			}
+			int reminderHour = timer.getHour();
+		    int reminderMin = timer.getMinute();
+			int reminderSec = timer.getSecond();
+			String stringTimer = (reminderHour > 0 ? Integer.toString(reminderHour)+" hour(s) " : "")
+					   + (reminderMin > 0 ? Integer.toString(reminderMin)+" minute(s) " : "")
+					   + (reminderSec > 0 ? Integer.toString(reminderSec)+" second(s)" : "");
 			reminderTimes.add(new ReminderTime(reminder.getId(),stringTimer));
 		});
-		theModel.addAttribute("currentAccount", currentAccount);
 		theModel.addAttribute("selectedEvent", currentEvent);
 		theModel.addAttribute("reminders", reminderTimes);
 		return "/reminders/list-reminders";
+		
 	}
 	
 	@GetMapping("/renderFormForAdd")
 	public String renderFormForAdd(@RequestParam("selectedEventId") int theId, Model theModel) {
+		
 		PlannerReminder newReminder = new PlannerReminder();
 		newReminder.setEventId(theId);
 		theModel.addAttribute("plannerReminder",newReminder);
 		return "/reminders/reminder-form";
+		
 	}
 	
 	@GetMapping("/renderFormForUpdate")
 	public String renderFormForUpdate(@RequestParam("reminderId") int theId, Model theModel) {
+		
 		Reminder currentReminder = reminderService.findById(theId);
 		Event eventOfReminder = currentReminder.getEvent();
 		PlannerReminder plannerReminder = new PlannerReminder();
@@ -94,6 +91,7 @@ public class ReminderController {
 		theModel.addAttribute("plannerReminder",plannerReminder);
 		theModel.addAttribute("eventId",eventOfReminder.getId());
 		return "/reminders/reminder-form";
+		
 	}
 	
 	@PostMapping("/save")
@@ -125,12 +123,15 @@ public class ReminderController {
 		
 		reminderService.save(newReminder);
 		return "redirect:/reminders/list?currentEventId="+Integer.toString(eventOfReminder.getId());
+		
 	}
 	
 	@GetMapping("/delete")
 	public String deleteReminder(@RequestParam("reminderId") int theId) {
+		
 		Reminder reminderToDelete = reminderService.findById(theId);
 		reminderService.deleteById(theId);
 		return "redirect:/reminders/list?currentEventId="+Integer.toString(reminderToDelete.getEvent().getId());
+		
 	}
 }

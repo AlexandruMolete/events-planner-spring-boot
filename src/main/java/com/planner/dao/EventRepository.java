@@ -10,7 +10,7 @@ import com.planner.entity.Event;
 
 public interface EventRepository extends JpaRepository<Event, Integer>{
 
-	public List<Event> findByAccountOrderByDateAsc(Account account);
+	public List<Event> findByAccountsOrderByDateAsc(Account account);
 	
-	public List<Event> findByAccountAndDateOrderByTimeAsc(Account account, LocalDate date);
+	public List<Event> findByAccountsAndDateOrderByTimeAsc(Account accounts, LocalDate date);
 }

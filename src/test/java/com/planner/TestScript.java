@@ -15,7 +15,6 @@ public class TestScript {
                 LocalTime.parse(t, DateTimeFormatter.ISO_LOCAL_TIME);
                 return true;
             } catch (Exception exp) {
-            	exp.printStackTrace();
                 return false;
             }
 		});
@@ -25,11 +24,12 @@ public class TestScript {
                 LocalDate.parse(d, DateTimeFormatter.ISO_LOCAL_DATE);
                 return true;
             } catch (Exception exp) {
-            	exp.printStackTrace();
                 return false;
             }
 		});
 		System.out.println(isDateFormatCorrect);
+		int a=0,b=1;
+		System.out.println((b!=0)?Integer.toString(b):""+((a!=0)?Integer.toString(a):""));
 	}
 
 }

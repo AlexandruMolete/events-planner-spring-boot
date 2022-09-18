@@ -10,7 +10,9 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.OneToMany;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
+//import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 @Entity
@@ -33,29 +35,30 @@ public class Account {
 	
 	@Column(name = "last_name")
 	private String lastName;
-	
-	@OneToMany(fetch = FetchType.LAZY,cascade = CascadeType.ALL)
-	@JoinColumn(name = "account_id")
-	private Collection<Event> events;
 
+	@ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST,CascadeType.MERGE,
+			CascadeType.DETACH,CascadeType.REFRESH})
+	@JoinTable(name = "account_role", 
+	joinColumns = @JoinColumn(name = "account_id"), 
+	inverseJoinColumns = @JoinColumn(name = "role_id"))
+	private Collection<Role> roles;
+	
+	@ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST,CascadeType.MERGE,
+			CascadeType.DETACH,CascadeType.REFRESH})
+	@JoinTable(name = "accounts_events", 
+	joinColumns = @JoinColumn(name = "account_id"), 
+	inverseJoinColumns = @JoinColumn(name = "event_id"))
+	private Collection<Event> events;
+	
 	public Account() {
 	}
-	
-	public Account(int id, String email, String password, String firstName, String lastName, Collection<Event> events) {
-		this.id = id;
-		this.email = email;
-		this.password = password;
-		this.firstName = firstName;
-		this.lastName = lastName;
-		this.events = events;
-	}
 
-	public Account(String email, String password, String firstName, String lastName, Collection<Event> events) {
+	public Account(String email, String password, String firstName, String lastName, Collection<Role> roles) {
 		this.email = email;
 		this.password = password;
 		this.firstName = firstName;
 		this.lastName = lastName;
-		this.events = events;
+		this.roles = roles;
 	}
 
 	public int getId() {
@@ -98,6 +101,14 @@ public class Account {
 		this.lastName = lastName;
 	}
 
+	public Collection<Role> getRoles() {
+		return roles;
+	}
+
+	public void setRoles(Collection<Role> roles) {
+		this.roles = roles;
+	}
+
 	public Collection<Event> getEvents() {
 		return events;
 	}
@@ -109,7 +120,7 @@ public class Account {
 	@Override
 	public String toString() {
 		return "Account [id=" + id + ", email=" + email + ", password=" + password + ", firstName=" + firstName
-				+ ", lastName=" + lastName + ", events=" + events + "]";
+				+ ", lastName=" + lastName + ", roles=" + roles + ", events=" + events + "]";
 	}
 
 }

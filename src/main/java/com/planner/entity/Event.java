@@ -12,7 +12,9 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
+//import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
@@ -25,8 +27,8 @@ public class Event {
 	@Column(name = "id")
 	private int id;
 	
-	@Column(name = "title")
-	private String eventTitle;
+	@Column(name = "name")
+	private String name;
 	
 	@Column(name = "date")
 	private LocalDate date;
@@ -34,10 +36,12 @@ public class Event {
 	@Column(name = "time")
 	private LocalTime time;
 	
-	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST,CascadeType.MERGE,
+	@ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST,CascadeType.MERGE,
 			CascadeType.DETACH,CascadeType.REFRESH})
-	@JoinColumn(name = "account_id")
-	private Account account;
+	@JoinTable(name = "accounts_events", 
+	joinColumns = @JoinColumn(name = "event_id"), 
+	inverseJoinColumns = @JoinColumn(name = "account_id"))
+	private Collection<Account> accounts;
 	
 	@OneToMany(fetch = FetchType.LAZY,cascade = CascadeType.ALL)
 	@JoinColumn(name = "event_id")
@@ -46,21 +50,21 @@ public class Event {
 	public Event() {
 	}
 
-	public Event(int id, String eventTitle, LocalDate date, LocalTime time, Account account,
+	public Event(int id, String eventTitle, LocalDate date, LocalTime time, Collection<Account> accounts,
 			Collection<Reminder> reminders) {
 		this.id = id;
-		this.eventTitle = eventTitle;
+		this.name = eventTitle;
 		this.date = date;
 		this.time = time;
-		this.account = account;
+		this.accounts = accounts;
 		this.reminders = reminders;
 	}
 
-	public Event(String eventTitle, LocalDate date, LocalTime time, Account account) {
-		this.eventTitle = eventTitle;
+	public Event(String eventTitle, LocalDate date, LocalTime time, Collection<Account> accounts) {
+		this.name = eventTitle;
 		this.date = date;
 		this.time = time;
-		this.account = account;
+		this.accounts = accounts;
 	}
 
 	public int getId() {
@@ -70,13 +74,13 @@ public class Event {
 	public void setId(int id) {
 		this.id = id;
 	}
-
-	public String getEventTitle() {
-		return eventTitle;
+	
+	public String getName() {
+		return name;
 	}
 
-	public void setEventTitle(String eventTitle) {
-		this.eventTitle = eventTitle;
+	public void setName(String name) {
+		this.name = name;
 	}
 
 	public LocalDate getDate() {
@@ -95,12 +99,12 @@ public class Event {
 		this.time = time;
 	}
 
-	public Account getAccount() {
-		return account;
+	public Collection<Account> getAccounts() {
+		return accounts;
 	}
 
-	public void setAccount(Account account) {
-		this.account = account;
+	public void setAccounts(Collection<Account> accounts) {
+		this.accounts = accounts;
 	}
 
 	public Collection<Reminder> getReminders() {
@@ -113,8 +117,8 @@ public class Event {
 
 	@Override
 	public String toString() {
-		return "Event [id=" + id + ", eventTitle=" + eventTitle + ", date=" + date + ", time=" + time + ", account="
-				+ account + ", reminders=" + reminders + "]";
+		return "Event [id=" + id + ", name=" + name + ", date=" + date + ", time=" + time + ", accounts="
+				+ accounts + ", reminders=" + reminders + "]";
 	}
 
 

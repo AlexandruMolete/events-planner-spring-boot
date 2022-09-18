@@ -1,12 +1,12 @@
 package com.planner.auxiliary;
 
-public class Notification{
+public class EventNotification{
 	
 	private String eventName;
 	
 	private String remainingTime;
 
-	public Notification(String eventName, String remainingTime) {
+	public EventNotification(String eventName, String remainingTime) {
 		this.eventName = eventName;
 		this.remainingTime = remainingTime;
 	}

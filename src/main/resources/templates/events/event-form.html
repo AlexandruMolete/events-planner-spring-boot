@@ -45,12 +45,12 @@
 						<input type="hidden" th:field="*{id}" />
 						
 						<div style="margin-bottom: 25px" class="input-group">
-							<input type="text" th:field="*{eventTitle}" placeholder="Event name" class="form-control" th:errorclass="fieldError" />
+							<input type="text" th:field="*{name}" placeholder="Event name" class="form-control" th:errorclass="fieldError" />
 						</div>
-						<div th:if="${#fields.hasErrors('eventTitle')}"
+						<div th:if="${#fields.hasErrors('name')}"
 							style="margin-bottom: 25px" class="text-danger">
 							<ul>
-							  <li th:each="err : ${#fields.errors('eventTitle')}" th:text="'Event name ' + ${err}" />
+							  <li th:each="err : ${#fields.errors('name')}" th:text="'Event name ' + ${err}" />
 							</ul>						
 						</div>
 						
@@ -80,11 +80,9 @@
 							</div>
 						</div>
 						
-						<input type="hidden" th:field="*{accountId}" />
-						
 					</form>
 
-					<a th:href="@{/events/list(currentAccountId=${accountId})}" class="btn btn-primary btn-sm mr-5 mb-3">Cancel</a>
+					<a th:href="@{/events/list}" class="btn btn-primary btn-sm mr-5 mb-3">Cancel</a>
 
 				</div>
 

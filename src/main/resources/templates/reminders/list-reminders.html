@@ -21,9 +21,9 @@
 	<hr>
 	
 	<div>
-		<h5 th:text="'User: '+${currentAccount.firstName}+' '+${currentAccount.lastName}"></h5>
+		<h5 th:text="'User: '+${session.account.firstName}+' '+${session.account.lastName}"></h5>
 		<br>
-		<h5 th:text="'Event name: '+${selectedEvent.eventTitle}"></h5>
+		<h5 th:text="'Event name: '+${selectedEvent.name}"></h5>
 		<br>
 		<h5 th:text="'Event date: '+${selectedEvent.date}"></h5>
 		<br>
@@ -70,7 +70,7 @@
 		</tbody>		
 	</table>
 	
-	<a th:href="@{/events/list(currentAccountId=${currentAccount.id})}" class="btn btn-primary btn-sm mr-5 mb-3">Return to events list</a>
+	<a th:href="@{/events/list}" class="btn btn-primary btn-sm mr-5 mb-3">Return to list of events</a>
 	
 </div>
 	

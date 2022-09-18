@@ -2,7 +2,10 @@ package com.planner.controller;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -10,6 +13,8 @@ import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.propertyeditors.StringTrimmerEditor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -21,7 +26,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.planner.auxiliary.Notification;
+import com.planner.auxiliary.EventNotification;
 import com.planner.entity.Account;
 import com.planner.entity.Event;
 import com.planner.entity.Reminder;
@@ -39,6 +44,7 @@ public class EventController {
 
 	@Autowired
 	public EventController(EventService theEventService, AccountService theAccountService) {
+		
 		eventService = theEventService;
 		accountService = theAccountService;
 	}
@@ -51,8 +57,9 @@ public class EventController {
 		dataBinder.registerCustomEditor(String.class, stringTrimmerEditor);
 	}
 	
-	public List<Notification> getUpcomingEventsForCurrentDate(List<Event> theEvents){
-		List<Notification> upcomingEvents = new ArrayList<>();
+	public List<EventNotification> getUpcomingEventsForCurrentDate(List<Event> theEvents){
+		
+		List<EventNotification> upcomingEvents = new ArrayList<>();
 		LocalTime currentLocalTime = LocalTime.now();
 		theEvents.stream()
 		 .filter(event -> event.getDate().isEqual(LocalDate.now()))
@@ -63,125 +70,183 @@ public class EventController {
 				 					 			  .map(Reminder::getTime)
 				 					 			  .distinct()
 				 					 			  .collect(Collectors.toList());
-				 int hoursDifference = event.getTime().getHour() - currentLocalTime.getHour();
-				 int minutesDifference = event.getTime().getMinute() - currentLocalTime.getMinute();
-				 int secondsDifference = event.getTime().getSecond() - currentLocalTime.getSecond();
+				 long hoursDifference = currentLocalTime.until(event.getTime(), ChronoUnit.HOURS);
+				 long minutesDifference = currentLocalTime.until(event.getTime(), ChronoUnit.MINUTES);
+				 long secondsDifference = currentLocalTime.until(event.getTime(), ChronoUnit.SECONDS);;
 				 reminderTimes.stream().forEach(reminderTime -> {
 					 
 					 String remainingTime = "";
-					 
-					 if(hoursDifference < reminderTime.getHour()) {
-						 remainingTime = remainingTime + Integer.toString(reminderTime.getHour())+" hour(s) ";
+					 int reminderHour = reminderTime.getHour();
+					 int reminderMin = reminderTime.getMinute();
+					 int reminderSec = reminderTime.getSecond();
+					 if(hoursDifference < reminderHour) {
+						 remainingTime = remainingTime + Integer.toString(reminderHour)+" hour(s) "
+								 					   + (reminderMin > 0 ? Integer.toString(reminderMin)+" minute(s) " : "")
+								 					   + (reminderSec > 0 ? Integer.toString(reminderSec)+" second(s)" : "");
 					 }
-					 if(minutesDifference < reminderTime.getMinute() && hoursDifference == 0) {
-						 remainingTime = remainingTime + Integer.toString(reminderTime.getMinute())+" minute(s) ";
+					 else if(minutesDifference < reminderTime.getMinute()) {
+						 remainingTime = remainingTime + Integer.toString(reminderMin) + " minute(s) "			 					   
+			 					   					   + (reminderSec > 0 ? Integer.toString(reminderSec)+" second(s)" : "");
 					 }
-					 if(secondsDifference < reminderTime.getSecond() && hoursDifference == 0 && minutesDifference == 0) {
+					 else if(secondsDifference < reminderTime.getSecond()) {
 						 remainingTime = remainingTime + Integer.toString(reminderTime.getSecond())+" second(s)";
 					 }
 					 
 					 if(!remainingTime.isEmpty()) {
-						 upcomingEvents.add(new Notification(event.getEventTitle(),remainingTime));
+						 upcomingEvents.add(new EventNotification(event.getName(),remainingTime));
 					 }
 				 });
 			 }
 		 });
 		return upcomingEvents;
+		
 	}
 
 	@GetMapping("/list")
-	public String listEvents(@RequestParam("currentAccountId") int accountId, Model theModel) {
+	public String listEvents(@AuthenticationPrincipal UserDetails currentSessionAccount, Model theModel) {
 		
-		Account currentAccount = accountService.findById(accountId).get();
+		String accountEmail = currentSessionAccount.getUsername();
+		Account currentAccount = accountService.findByEmail(accountEmail).get();
 		List<Event> theEvents = eventService.findByAccount(currentAccount);
 		List<String> theDates = theEvents.stream().map(Event::getDate).map(LocalDate::toString).distinct().collect(Collectors.toList());
-		List<Notification> upcomingEvents = getUpcomingEventsForCurrentDate(theEvents);
+		List<EventNotification> upcomingEvents = getUpcomingEventsForCurrentDate(theEvents);
 		
-		theModel.addAttribute("currentAccount", currentAccount);
+//		theModel.addAttribute("currentAccount", currentAccount);
 		theModel.addAttribute("events", theEvents);
 		theModel.addAttribute("dates",theDates);
 		theModel.addAttribute("notifications", upcomingEvents);
 		
 		return "/events/list-events";
+		
 	}
 	
 	@GetMapping("/search")
-	public String searchEventsByDate(@RequestParam("accountId") int theId, @RequestParam("selectedEventDate") String theDate, Model theModel) {
-		Account currentAccount = accountService.findById(theId).get();
+	public String searchEventsByDate(@RequestParam("selectedEventDate") String theDate,
+			@AuthenticationPrincipal UserDetails currentSessionAccount,
+			Model theModel) {
+		
+		String accountEmail = currentSessionAccount.getUsername();
+		Account currentAccount = accountService.findByEmail(accountEmail).get();
 		List<Event> theEvents = eventService.searchBy(currentAccount, theDate);
 		List<String> theDates = eventService.findByAccount(currentAccount).stream().map(Event::getDate)
 									.map(LocalDate::toString).distinct().collect(Collectors.toList());
-		List<Notification> upcomingEvents = getUpcomingEventsForCurrentDate(theEvents);
-		theModel.addAttribute("currentAccount", currentAccount);
+		List<EventNotification> upcomingEvents = getUpcomingEventsForCurrentDate(theEvents);
+//		theModel.addAttribute("currentAccount", currentAccount);
 		theModel.addAttribute("events", theEvents);
 		theModel.addAttribute("dates",theDates);
 		theModel.addAttribute("notifications", upcomingEvents);
 		return "/events/list-events";
+		
 	}
 	
 	@GetMapping("/renderFormForAdd")
-	public String renderFormForAdd(@RequestParam("currentAccountId") int theId, Model theModel) {
+	public String renderFormForAdd(Model theModel) {
+		
 		PlannerEvent newEvent = new PlannerEvent();
-		newEvent.setAccountId(theId);
 		theModel.addAttribute("plannerEvent",newEvent);
 		return "/events/event-form";
+		
 	}
 	
 	@GetMapping("/renderFormForUpdate")
 	public String renderFormForUpdate(@RequestParam("eventId") int theId, Model theModel) {
+		
 		Event currentEvent = eventService.findById(theId);
-		Account accountOfEvent = currentEvent.getAccount();
 		PlannerEvent plannerEvent = new PlannerEvent();
 		plannerEvent.setId(currentEvent.getId());
-		plannerEvent.setEventTitle(currentEvent.getEventTitle());
+		plannerEvent.setName(currentEvent.getName());
 		plannerEvent.setDate(currentEvent.getDate().toString());
 		plannerEvent.setTime(currentEvent.getTime().toString());
 		theModel.addAttribute("plannerEvent",plannerEvent);
-		theModel.addAttribute("accountId",accountOfEvent.getId());
 		return "/events/event-form";
+		
 	}
 	
 	@PostMapping("/save")
-	public String saveEvent(@Valid @ModelAttribute("plannerEvent") PlannerEvent eventDetailsFromForm, BindingResult theBindingResult) {
+	public String saveEvent(@Valid @ModelAttribute("plannerEvent") PlannerEvent eventDetailsFromForm,
+			BindingResult theBindingResult,
+			@AuthenticationPrincipal UserDetails currentSessionAccount) {
 		
 		if(theBindingResult.hasErrors()) {
 			return "/events/event-form";
 		}
 		
-		Account accountOfEvent = new Account();
+		String accountEmail = currentSessionAccount.getUsername();
+		Account currentAccount = accountService.findByEmail(accountEmail).get();
 		Event newEvent = new Event();
 		
 		if(eventDetailsFromForm.getId() != 0) {
 			Event theEvent = eventService.findById(eventDetailsFromForm.getId());
-			accountOfEvent = theEvent.getAccount();
 			newEvent = new Event(
 					eventDetailsFromForm.getId(),
-					eventDetailsFromForm.getEventTitle(),
+					eventDetailsFromForm.getName(),
 					LocalDate.parse(eventDetailsFromForm.getDate()),
 					LocalTime.parse(eventDetailsFromForm.getTime()),
-					accountOfEvent,
+					theEvent.getAccounts(),
 					theEvent.getReminders()
 					);
 		}
 		else {
-			accountOfEvent = accountService.findById(eventDetailsFromForm.getAccountId()).get();
 			newEvent = new Event(
-					eventDetailsFromForm.getEventTitle(),
+					eventDetailsFromForm.getName(),
 					LocalDate.parse(eventDetailsFromForm.getDate()),
 					LocalTime.parse(eventDetailsFromForm.getTime()),
-					accountOfEvent
+					Arrays.asList(currentAccount)
 					);
 		}
-		
 		eventService.save(newEvent);
-		return "redirect:/events/list?currentAccountId="+Integer.toString(accountOfEvent.getId());
+		return "redirect:/events/list";
+		
 	}
 	
 	@GetMapping("/delete")
 	public String deleteEvent(@RequestParam("eventId") int theId) {
-		Event eventToDelete = eventService.findById(theId);
+		
 		eventService.deleteById(theId);
-		return "redirect:/events/list?currentAccountId="+Integer.toString(eventToDelete.getAccount().getId());
+		return "redirect:/events/list";
+		
+	}
+	
+	@GetMapping("/renderPageForInvitation")
+	public String renderPageForInvitation(@RequestParam("eventId") int theId, Model theModel) {
+		
+		Event currentEvent = eventService.findById(theId);
+		List<Account> availableAccountsForInvitation = accountService.findAll();
+		availableAccountsForInvitation.removeAll(currentEvent.getAccounts());
+		boolean isAnyAccountAvailable = !availableAccountsForInvitation.isEmpty();
+		theModel.addAttribute("selectedEvent",currentEvent);
+		theModel.addAttribute("isAnyAccountAvailable",isAnyAccountAvailable);
+		theModel.addAttribute("availableAccounts",availableAccountsForInvitation);
+		return "/events/invite-user";
+		
+	}
+	
+	@PostMapping("/invite")
+	public String inviteUser(@RequestParam("eventId") int theEventId, @RequestParam("selectedAccountId") int theInvitedAccountId) {
+
+		Event currentEvent = eventService.findById(theEventId);
+		Account theInvitedAccout = accountService.findById(theInvitedAccountId).get();
+		Collection<Account> newListOfAccountsForCurrentEvent = currentEvent.getAccounts();
+		newListOfAccountsForCurrentEvent.add(theInvitedAccout);
+		currentEvent.setAccounts(newListOfAccountsForCurrentEvent);
+		eventService.save(currentEvent);
+		return "redirect:/events/renderPageForInvitation?eventId="+Integer.toString(theEventId);
+		
+	}
+	
+	@PostMapping("/decline")
+	public String declineInvitation(@RequestParam("eventId") int theEventId,
+			@AuthenticationPrincipal UserDetails currentSessionAccount) {
+		
+		Event currentEvent = eventService.findById(theEventId);
+		String guestEmail = currentSessionAccount.getUsername();
+		Account theGuestAccount = accountService.findByEmail(guestEmail).get();
+		Collection<Account> modifiedListOfAccounts = currentEvent.getAccounts();
+		modifiedListOfAccounts.remove(theGuestAccount);
+		currentEvent.setAccounts(modifiedListOfAccounts);
+		eventService.save(currentEvent);
+		return "redirect:/events/list";
+		
 	}
 	
 }

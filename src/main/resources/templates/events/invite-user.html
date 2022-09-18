@@ -1,0 +1,57 @@
+<!DOCTYPE HTML>
+<html lang="en" 
+		xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+
+	<title>Events Planner</title>
+</head>
+
+<body>
+
+<div class="container">
+
+	<h3>Invitation for:</h3>
+	<br>
+	
+	<div>
+		<h5 th:text="'Event name: '+${selectedEvent.name}"></h5>
+		<br>
+		<h5 th:text="'Event date: '+${selectedEvent.date}"></h5>
+		<br>
+		<h5 th:text="'Set at: '+${selectedEvent.time}"></h5>
+	</div>
+	<hr>
+	<div th:if="${isAnyAccountAvailable}">
+		<form th:action="@{/events/invite}" method="POST" class="form-vertical">
+			
+			<input type="hidden" name="eventId" th:value="${selectedEvent.id}" />
+			
+			<label for="selectedAccountId">Choose a guest: </label>
+			  <select name="selectedAccountId" id="dropDownList">
+			    <option th:each="account : ${availableAccounts}" th:value="${account.id}" th:text="${account.firstName}+' '+${account.lastName}"></option>
+			  </select>
+			  
+			<button class="btn btn-success btn-sm" type="submit">Invite</button>
+			
+	    </form>	
+    </div>
+    <div th:unless="${isAnyAccountAvailable}">
+    	<p class="alert alert-warning">There are no more available accounts to invite, at the moment.</p>
+    </div>
+	
+	<a th:href="@{/events/list}" class="btn btn-primary btn-sm mr-5 mb-3">Return to list of events</a>
+	
+</div>
+	
+</body>
+</html>
+
+
+

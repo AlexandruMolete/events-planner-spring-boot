@@ -32,20 +32,20 @@ public class EventServiceImpl implements EventService {
 	@Override
 	public List<Event> findByAccount(Account account) {
 		
-		return eventRepository.findByAccountOrderByDateAsc(account);
+		return eventRepository.findByAccountsOrderByDateAsc(account);
 	}
 
 	@Override
 	public List<Event> searchBy(Account account, String dateOption) {
 		List<Event> results = new ArrayList<>();
 		if(dateOption.compareTo("all") == 0) {
-			results = new ArrayList<>(eventRepository.findByAccountOrderByDateAsc(account));
+			results = eventRepository.findByAccountsOrderByDateAsc(account);
 		}
 		else if(dateOption.compareTo("now") == 0) {
-			results = new ArrayList<>(eventRepository.findByAccountAndDateOrderByTimeAsc(account, LocalDate.now()));
+			results = eventRepository.findByAccountsAndDateOrderByTimeAsc(account, LocalDate.now());
 		}
 		else {
-			results = new ArrayList<>(eventRepository.findByAccountAndDateOrderByTimeAsc(account, LocalDate.parse(dateOption)));
+			results = eventRepository.findByAccountsAndDateOrderByTimeAsc(account, LocalDate.parse(dateOption));
 		}
 		return results;
 	}

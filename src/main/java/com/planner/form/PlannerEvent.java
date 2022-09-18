@@ -13,7 +13,7 @@ public class PlannerEvent {
 
 	@NotNull(message = "is required")
 	@Size(min = 1, message = "is required")
-	private String eventTitle;
+	private String name;
 
 	@ValidDate
 	@NotNull(message = "is required")
@@ -24,8 +24,6 @@ public class PlannerEvent {
 	@NotNull(message = "is required")
 	@Size(min = 1, message = "is required")
 	private String time;
-	
-	private int accountId;
 
 	public PlannerEvent() {
 	}
@@ -38,12 +36,12 @@ public class PlannerEvent {
 		this.id = id;
 	}
 
-	public String getEventTitle() {
-		return eventTitle;
+	public String getName() {
+		return name;
 	}
 
-	public void setEventTitle(String eventTitle) {
-		this.eventTitle = eventTitle;
+	public void setName(String name) {
+		this.name = name;
 	}
 
 	public String getDate() {
@@ -60,14 +58,6 @@ public class PlannerEvent {
 
 	public void setTime(String time) {
 		this.time = time;
-	}
-
-	public int getAccountId() {
-		return accountId;
-	}
-
-	public void setAccountId(int accountId) {
-		this.accountId = accountId;
 	}
 	
 }
