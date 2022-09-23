@@ -16,8 +16,6 @@ public interface AccountService extends UserDetailsService{
 	
 	public List<Account> findAll();
 	
-//	public List<Account> findAllDifferentFromEmail(String theEmail);
-	
 	public void save(PlannerUser plannerUser);
 	
 	public void deleteById(int theId);

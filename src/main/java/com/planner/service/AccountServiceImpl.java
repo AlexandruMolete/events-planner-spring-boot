@@ -47,10 +47,8 @@ public class AccountServiceImpl implements AccountService {
 
 	@Override
 	public Optional<Account> findById(int theId) {
+		
 		Optional<Account> result = accountRepository.findById(theId);
-		if (result.isEmpty()){
-			throw new RuntimeException("Did not find account id - " + theId);
-		}
 		return result;
 	}
 

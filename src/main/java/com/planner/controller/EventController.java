@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.validation.Valid;
@@ -106,12 +108,38 @@ public class EventController {
 	public String listEvents(@AuthenticationPrincipal UserDetails currentSessionAccount, Model theModel) {
 		
 		String accountEmail = currentSessionAccount.getUsername();
-		Account currentAccount = accountService.findByEmail(accountEmail).get();
-		List<Event> theEvents = eventService.findByAccount(currentAccount);
+		
+		Optional<Account> resultedAccount = Optional.empty();
+		
+		try {
+			resultedAccount = accountService.findByEmail(accountEmail);
+		}catch(Exception exp) {
+			throw new RuntimeException("Could not list the events. The session has expired.");
+		}
+		
+		Account currentAccount = new Account();
+		
+		if(resultedAccount.isPresent()) {
+			currentAccount = resultedAccount.get();
+		}
+		else {
+			throw new RuntimeException("Could not list the events. The account containing the e-mail address: " + accountEmail + ", does not exist.");
+		}
+		
+		List<Event> theEvents = new ArrayList<>();
+		
+		try {
+			theEvents = eventService.findByAccount(currentAccount);
+		}catch(Exception exp){
+			throw new RuntimeException("Could not list the events. The account of: " + 
+										currentAccount.getFirstName() + " " + currentAccount.getLastName() + 
+										", could not be found.");
+		}
+		
 		List<String> theDates = theEvents.stream().map(Event::getDate).map(LocalDate::toString).distinct().collect(Collectors.toList());
+		
 		List<EventNotification> upcomingEvents = getUpcomingEventsForCurrentDate(theEvents);
 		
-//		theModel.addAttribute("currentAccount", currentAccount);
 		theModel.addAttribute("events", theEvents);
 		theModel.addAttribute("dates",theDates);
 		theModel.addAttribute("notifications", upcomingEvents);
@@ -126,15 +154,49 @@ public class EventController {
 			Model theModel) {
 		
 		String accountEmail = currentSessionAccount.getUsername();
-		Account currentAccount = accountService.findByEmail(accountEmail).get();
-		List<Event> theEvents = eventService.searchBy(currentAccount, theDate);
-		List<String> theDates = eventService.findByAccount(currentAccount).stream().map(Event::getDate)
-									.map(LocalDate::toString).distinct().collect(Collectors.toList());
+		
+		Optional<Account> resultedAccount = Optional.empty();
+		
+		try {
+			resultedAccount = accountService.findByEmail(accountEmail);
+		}catch(Exception exp) {
+			throw new RuntimeException("Could not list the events. The session has expired.");
+		}
+		
+		Account currentAccount = new Account();
+		
+		if(resultedAccount.isPresent()) {
+			currentAccount = resultedAccount.get();
+		}
+		else {
+			throw new RuntimeException("Could not list the events. The account containing the e-mail address: " + accountEmail + ", does not exist.");
+		}
+		
+		List<Event> theEvents = new ArrayList<>();
+		
+		try {
+			theEvents = eventService.searchBy(currentAccount, theDate);
+		}catch(Exception exp){
+			throw new RuntimeException("Could not list the events. The events for the following date: " + theDate + ", could not be found.");
+		}
+		
+		List<String> theDates = new ArrayList<String>();
+		
+		try {
+			theDates = eventService.findByAccount(currentAccount).stream().map(Event::getDate)
+								   .map(LocalDate::toString).distinct().collect(Collectors.toList());
+		}catch(Exception exp) {
+			throw new RuntimeException("Could not list the dates. The events for user: " +
+										currentAccount.getFirstName() + " " + currentAccount.getLastName() +
+										" could not be found.");
+		}
+		
 		List<EventNotification> upcomingEvents = getUpcomingEventsForCurrentDate(theEvents);
-//		theModel.addAttribute("currentAccount", currentAccount);
+		
 		theModel.addAttribute("events", theEvents);
 		theModel.addAttribute("dates",theDates);
 		theModel.addAttribute("notifications", upcomingEvents);
+		
 		return "/events/list-events";
 		
 	}
@@ -151,13 +213,25 @@ public class EventController {
 	@GetMapping("/renderFormForUpdate")
 	public String renderFormForUpdate(@RequestParam("eventId") int theId, Model theModel) {
 		
-		Event currentEvent = eventService.findById(theId);
+		Event currentEvent = new Event();
+		
+		Optional<Event> foundEvent = eventService.findById(theId);
+		
+		if(foundEvent.isPresent()) {
+			currentEvent = foundEvent.get();
+		}
+		else {
+			throw new RuntimeException("Could not render the form to update the event. ID of " + theId + " was not found.");
+		}
+		
 		PlannerEvent plannerEvent = new PlannerEvent();
 		plannerEvent.setId(currentEvent.getId());
 		plannerEvent.setName(currentEvent.getName());
 		plannerEvent.setDate(currentEvent.getDate().toString());
 		plannerEvent.setTime(currentEvent.getTime().toString());
+		
 		theModel.addAttribute("plannerEvent",plannerEvent);
+		
 		return "/events/event-form";
 		
 	}
@@ -172,11 +246,49 @@ public class EventController {
 		}
 		
 		String accountEmail = currentSessionAccount.getUsername();
-		Account currentAccount = accountService.findByEmail(accountEmail).get();
+		
+		Optional<Account> foundAccount = Optional.empty();
+		
+		try {
+			foundAccount = accountService.findByEmail(accountEmail);
+		}catch(Exception exp) {
+			throw new RuntimeException("Could not save the event. The session has expired.");
+		}
+		
+		Account currentAccount = new Account();
+		
+		if(foundAccount.isPresent()) {
+			currentAccount = foundAccount.get();
+		}
+		else {
+			throw new RuntimeException("Could not save or update the event. The account containing the e-mail address: " + accountEmail + ", does not exist.");
+		}
+		
 		Event newEvent = new Event();
 		
 		if(eventDetailsFromForm.getId() != 0) {
-			Event theEvent = eventService.findById(eventDetailsFromForm.getId());
+			
+			Optional<Event> foundEvent = Optional.empty();
+			
+			Event theEvent = new Event();
+			
+			try {
+				
+				foundEvent = eventService.findById(eventDetailsFromForm.getId());
+				
+				if(foundEvent.isPresent()) {
+					theEvent = foundEvent.get();
+				}
+				else {
+					throw new NoSuchElementException();
+				}
+				
+			}catch(Exception exp) {
+				
+				throw new RuntimeException("Could not update the event. ID of " + eventDetailsFromForm.getId() + " was not found.");
+				
+			}
+			
 			newEvent = new Event(
 					eventDetailsFromForm.getId(),
 					eventDetailsFromForm.getName(),
@@ -185,6 +297,7 @@ public class EventController {
 					theEvent.getAccounts(),
 					theEvent.getReminders()
 					);
+			
 		}
 		else {
 			newEvent = new Event(
@@ -194,7 +307,13 @@ public class EventController {
 					Arrays.asList(currentAccount)
 					);
 		}
-		eventService.save(newEvent);
+		
+		try {
+			eventService.save(newEvent);
+		}catch(Exception exp) {
+			throw new RuntimeException("Could not save the event.");
+		}
+		
 		return "redirect:/events/list";
 		
 	}
@@ -202,7 +321,11 @@ public class EventController {
 	@GetMapping("/delete")
 	public String deleteEvent(@RequestParam("eventId") int theId) {
 		
-		eventService.deleteById(theId);
+		try {
+			eventService.deleteById(theId);
+		}catch(Exception exp) {
+			throw new RuntimeException("Could not delete the event with ID of " + theId + ".");
+		}
 		return "redirect:/events/list";
 		
 	}
@@ -210,13 +333,43 @@ public class EventController {
 	@GetMapping("/renderPageForInvitation")
 	public String renderPageForInvitation(@RequestParam("eventId") int theId, Model theModel) {
 		
-		Event currentEvent = eventService.findById(theId);
-		List<Account> availableAccountsForInvitation = accountService.findAll();
+		Optional<Event> foundEvent = Optional.empty();
+		
+		Event currentEvent = new Event();
+		
+		try {
+			
+			foundEvent = eventService.findById(theId);
+			
+			if(foundEvent.isPresent()) {
+				currentEvent = foundEvent.get();
+			}
+			else {
+				throw new NoSuchElementException();
+			}
+			
+		}catch(Exception exp) {
+			
+			throw new RuntimeException("Error while displaying the form to invite users. The event with the ID of " + theId + " was not found.");
+			
+		}
+		
+		List<Account> availableAccountsForInvitation = new ArrayList<Account>();
+		
+		try {
+			availableAccountsForInvitation = accountService.findAll();
+		} catch (Exception exp) {
+			throw new RuntimeException("Failed to find all accounts, while accessing the form to invite users.");
+		}
+		
 		availableAccountsForInvitation.removeAll(currentEvent.getAccounts());
+		
 		boolean isAnyAccountAvailable = !availableAccountsForInvitation.isEmpty();
+		
 		theModel.addAttribute("selectedEvent",currentEvent);
 		theModel.addAttribute("isAnyAccountAvailable",isAnyAccountAvailable);
 		theModel.addAttribute("availableAccounts",availableAccountsForInvitation);
+		
 		return "/events/invite-user";
 		
 	}
@@ -224,12 +377,57 @@ public class EventController {
 	@PostMapping("/invite")
 	public String inviteUser(@RequestParam("eventId") int theEventId, @RequestParam("selectedAccountId") int theInvitedAccountId) {
 
-		Event currentEvent = eventService.findById(theEventId);
-		Account theInvitedAccout = accountService.findById(theInvitedAccountId).get();
+		Optional<Event> foundEvent = Optional.empty();
+		
+		Event currentEvent = new Event();
+		
+		try {
+			
+			foundEvent = eventService.findById(theEventId);
+			
+			if(foundEvent.isPresent()) {
+				currentEvent = foundEvent.get();
+			}
+			else {
+				throw new NoSuchElementException();
+			}
+			
+		}catch(Exception exp) {
+			
+			throw new RuntimeException("Could not invite the user. The event with the ID of " + theEventId + " was not found.");
+			
+		}
+		
+		Account theInvitedAccount = new Account();
+		
+		Optional<Account> foundAccount = Optional.empty();
+		
+		try {
+			
+			foundAccount = accountService.findById(theInvitedAccountId);
+			
+			if (foundAccount.isPresent()) {
+				theInvitedAccount = foundAccount.get();
+			} else {
+				throw new NoSuchElementException();
+			}
+			
+		} catch (Exception exp) {
+			throw new RuntimeException("Could not invite the user. Account ID of " + theInvitedAccountId + " was not found.");
+		}
+		
 		Collection<Account> newListOfAccountsForCurrentEvent = currentEvent.getAccounts();
-		newListOfAccountsForCurrentEvent.add(theInvitedAccout);
+		
+		newListOfAccountsForCurrentEvent.add(theInvitedAccount);
+		
 		currentEvent.setAccounts(newListOfAccountsForCurrentEvent);
-		eventService.save(currentEvent);
+		
+		try {
+			eventService.save(currentEvent);
+		} catch (Exception e) {
+			throw new RuntimeException("Could not invite the user. Error updating the event with ID of " + theEventId + ".");
+		}
+		
 		return "redirect:/events/renderPageForInvitation?eventId="+Integer.toString(theEventId);
 		
 	}
@@ -238,13 +436,55 @@ public class EventController {
 	public String declineInvitation(@RequestParam("eventId") int theEventId,
 			@AuthenticationPrincipal UserDetails currentSessionAccount) {
 		
-		Event currentEvent = eventService.findById(theEventId);
+		Optional<Event> foundEvent = Optional.empty();
+		
+		Event currentEvent = new Event();
+		
+		try {
+			
+			foundEvent = eventService.findById(theEventId);
+			
+			if(foundEvent.isPresent()) {
+				currentEvent = foundEvent.get();
+			}
+			else {
+				throw new NoSuchElementException();
+			}
+			
+		}catch(Exception exp) {
+			
+			throw new RuntimeException("Error declining the invitation. The event with the ID of " + theEventId + " was not found.");
+			
+		}
+		
 		String guestEmail = currentSessionAccount.getUsername();
-		Account theGuestAccount = accountService.findByEmail(guestEmail).get();
+		
+		Account theGuestAccount = new Account();
+		
+		Optional<Account> foundAccount = Optional.empty();
+		
+		try {
+			
+			foundAccount = accountService.findByEmail(guestEmail);
+			
+			if (foundAccount.isPresent()) {
+				theGuestAccount = foundAccount.get();
+			} else {
+				throw new NoSuchElementException();
+			}
+			
+		} catch (Exception exp) {
+			throw new RuntimeException("Error declining the invitation from guest account. The e-mail address of " + guestEmail + " was not found.");
+		}
 		Collection<Account> modifiedListOfAccounts = currentEvent.getAccounts();
 		modifiedListOfAccounts.remove(theGuestAccount);
 		currentEvent.setAccounts(modifiedListOfAccounts);
-		eventService.save(currentEvent);
+		try {
+			eventService.save(currentEvent);
+		} catch (Exception exp) {
+			throw new RuntimeException("Error declining the invitation while updating the event with ID of " + theEventId + ".");
+		}
+
 		return "redirect:/events/list";
 		
 	}

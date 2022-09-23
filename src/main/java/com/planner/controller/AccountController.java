@@ -1,6 +1,8 @@
 package com.planner.controller;
 
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,16 +34,37 @@ public class AccountController {
 	@GetMapping("/delete")
 	public String deleteAccount(@RequestParam("accountId") int theId) {
 		
-		Account theAccount = accountService.findById(theId).get();
+		Optional<Account> foundAccount = Optional.empty();
+		
+		Account theAccount = new Account();
+		
+		try {
+			foundAccount = accountService.findById(theId);
+			if(foundAccount.isPresent()) {
+				theAccount = foundAccount.get();
+			} else {
+				throw new NoSuchElementException();
+			}
+		} catch (Exception exp) {
+			throw new RuntimeException("Error while deleting the account. User with ID of "+ theId + "was not found.");
+		}
+		
 		boolean isAccountGuest = theAccount.getRoles().stream().map(Role::getName).collect(Collectors.toList()).contains("ROLE_GUEST");
-		if(isAccountGuest) {
-			accountService.deleteById(theId);
+		
+		try {
+			if(isAccountGuest) {
+				accountService.deleteById(theId);
+			}
+			else {
+				List<Event> hostAccountEvents = eventService.findByAccount(theAccount);
+				hostAccountEvents.forEach(event -> eventService.deleteById(event.getId()));
+				accountService.deleteById(theId);
+			}
+		} catch (Exception exp) {
+			throw new RuntimeException("Error during the process of deleting the account of " + 
+										theAccount.getFirstName() + " " + theAccount.getLastName() + "was not found.");
 		}
-		else {
-			List<Event> hostAccountEvents = eventService.findByAccount(theAccount);
-			hostAccountEvents.forEach(event -> eventService.deleteById(event.getId()));
-			accountService.deleteById(theId);
-		}
+		
 		return "redirect:/accounts/renderLogInPage";
 		
 	}
@@ -52,5 +75,12 @@ public class AccountController {
 		return "/accounts/login-page";
 		
 	}	
+	
+	@GetMapping("/accessDenied")
+	public String renderAccessDeniedPage() {
+		
+		return "/accounts/access-denied";
+		
+	}
 
 }

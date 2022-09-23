@@ -54,22 +54,20 @@ public class RegistrationController {
 				Model theModel) {
 		
 		String userEmail = thePlannerUser.getEmail();
-		// form validation
+
 		 if (theBindingResult.hasErrors()){
 			 
 			 return "/accounts/registration-form";
 			 
 	     }
 
-		// check the database if user already exists
         Optional<Account> existingAccount = accountService.findByEmail(userEmail);
         if (existingAccount.isPresent()){
         	theModel.addAttribute("plannerUser", new PlannerUser());
 			theModel.addAttribute("registrationError", "Email address already exists.");
         	return "/accounts/registration-form";
         }
-        
-        // create user account        						
+            						
         accountService.save(thePlannerUser);
         
         return "/accounts/registration-confirmation";		

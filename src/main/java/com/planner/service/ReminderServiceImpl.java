@@ -19,12 +19,10 @@ public class ReminderServiceImpl implements ReminderService {
 	}
 
 	@Override
-	public Reminder findById(int theId) {
+	public Optional<Reminder> findById(int theId) {
+		
 		Optional<Reminder> result = reminderRepository.findById(theId);
-		if(result.isEmpty()) {
-			throw new RuntimeException("Did not find reminder id - " + theId);
-		}
-		return result.get();
+		return result;
 	}
 
 	@Override

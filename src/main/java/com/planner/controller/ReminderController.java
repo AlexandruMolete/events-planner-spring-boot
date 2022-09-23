@@ -3,6 +3,8 @@ package com.planner.controller;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import javax.validation.Valid;
 
@@ -51,9 +53,37 @@ public class ReminderController {
 	@GetMapping("/list")
 	public String listReminders(@RequestParam("currentEventId") int theEventId, Model theModel) {
 		
-		Event currentEvent = eventService.findById(theEventId);
-		List<Reminder> theReminders = reminderService.findByEvent(currentEvent);
+		Optional<Event> foundEvent = Optional.empty();
+		
+		Event currentEvent = new Event();
+		
+		try {
+			
+			foundEvent = eventService.findById(theEventId);
+			
+			if(foundEvent.isPresent()) {
+				currentEvent = foundEvent.get();
+			}
+			else {
+				throw new NoSuchElementException();
+			}
+			
+		} catch(Exception exp) {
+			
+			throw new RuntimeException("Could not list the reminders. The event with ID of " + theEventId + " was not found.");
+			
+		}
+		
+		List<Reminder> theReminders = new ArrayList<Reminder>();
+		
+		try {
+			theReminders = reminderService.findByEvent(currentEvent);
+		} catch (Exception exp) {
+			throw new RuntimeException("Could not list the reminders. Error occured while trying to find the reminders of event: " + currentEvent.getName());
+		}
+		
 		List<ReminderTime> reminderTimes = new ArrayList<>();
+		
 		theReminders.forEach(reminder -> {
 			LocalTime timer = reminder.getTime();
 			int reminderHour = timer.getHour();
@@ -64,18 +94,21 @@ public class ReminderController {
 					   + (reminderSec > 0 ? Integer.toString(reminderSec)+" second(s)" : "");
 			reminderTimes.add(new ReminderTime(reminder.getId(),stringTimer));
 		});
+		
 		theModel.addAttribute("selectedEvent", currentEvent);
 		theModel.addAttribute("reminders", reminderTimes);
+		
 		return "/reminders/list-reminders";
 		
 	}
 	
 	@GetMapping("/renderFormForAdd")
-	public String renderFormForAdd(@RequestParam("selectedEventId") int theId, Model theModel) {
+	public String renderFormForAdd(@RequestParam("selectedEventId") int theEventId, Model theModel) {
 		
 		PlannerReminder newReminder = new PlannerReminder();
-		newReminder.setEventId(theId);
+		newReminder.setEventId(theEventId);
 		theModel.addAttribute("plannerReminder",newReminder);
+		theModel.addAttribute("eventId",theEventId);
 		return "/reminders/reminder-form";
 		
 	}
@@ -83,7 +116,23 @@ public class ReminderController {
 	@GetMapping("/renderFormForUpdate")
 	public String renderFormForUpdate(@RequestParam("reminderId") int theId, Model theModel) {
 		
-		Reminder currentReminder = reminderService.findById(theId);
+		Optional<Reminder> foundReminder = Optional.empty();
+		
+		Reminder currentReminder = new Reminder();
+		
+		try {
+			foundReminder = reminderService.findById(theId);
+			
+			if (foundReminder.isPresent()) {
+				currentReminder = foundReminder.get();
+			} else {
+				throw new NoSuchElementException();
+			}
+			
+		} catch (Exception exp) {
+			throw new RuntimeException("Could not render form to update reminder with ID of " + theId + ".");
+		}
+		
 		Event eventOfReminder = currentReminder.getEvent();
 		PlannerReminder plannerReminder = new PlannerReminder();
 		plannerReminder.setId(currentReminder.getId());
@@ -102,11 +151,28 @@ public class ReminderController {
 		}
 		
 		Event eventOfReminder = new Event();
+		
 		Reminder newReminder = new Reminder();
 		
 		if(reminderDetailsFromForm.getId() != 0) {
-			Reminder theReminder = reminderService.findById(reminderDetailsFromForm.getId());
-			eventOfReminder = theReminder.getEvent();
+			
+			Optional<Reminder> foundReminder = Optional.empty();
+			
+			Reminder oldReminder = new Reminder();
+			
+			try {
+				foundReminder = reminderService.findById(reminderDetailsFromForm.getId());
+				if (foundReminder.isPresent()) {
+					oldReminder = foundReminder.get();
+				} else {
+					throw new NoSuchElementException();
+				}
+			} catch (Exception e) {
+				throw new RuntimeException("Could not update the reminder. Error finding the reminder with ID of " + reminderDetailsFromForm.getId());
+			}
+			
+			eventOfReminder = oldReminder.getEvent();
+			
 			newReminder = new Reminder(
 					reminderDetailsFromForm.getId(),
 					LocalTime.parse(reminderDetailsFromForm.getTime()),
@@ -114,14 +180,34 @@ public class ReminderController {
 					);
 		}
 		else {
-			eventOfReminder = eventService.findById(reminderDetailsFromForm.getEventId());
+			
+			Optional<Event> foundEvent = Optional.empty();
+			
+			try {
+				foundEvent = eventService.findById(reminderDetailsFromForm.getEventId());
+				if (foundEvent.isPresent()) {
+					eventOfReminder = foundEvent.get();
+				} else {
+					throw new NoSuchElementException();
+				}
+			} catch (Exception e) {
+				throw new RuntimeException("Could not associate the new reminder to the event of ID " + 
+							reminderDetailsFromForm.getEventId() + ". No such event could be found.");
+			}
+
 			newReminder = new Reminder(
 					LocalTime.parse(reminderDetailsFromForm.getTime()),
 					eventOfReminder
 					);
 		}
 		
-		reminderService.save(newReminder);
+		try {
+			reminderService.save(newReminder);
+		} catch (Exception e) {
+			throw new RuntimeException("Could not save or update the new reminder.");
+		}
+		
+		
 		return "redirect:/reminders/list?currentEventId="+Integer.toString(eventOfReminder.getId());
 		
 	}
@@ -129,9 +215,27 @@ public class ReminderController {
 	@GetMapping("/delete")
 	public String deleteReminder(@RequestParam("reminderId") int theId) {
 		
-		Reminder reminderToDelete = reminderService.findById(theId);
-		reminderService.deleteById(theId);
-		return "redirect:/reminders/list?currentEventId="+Integer.toString(reminderToDelete.getEvent().getId());
+		Optional<Reminder> foundReminder = Optional.empty();
+		
+		Reminder reminderToBeDeleted = new Reminder();
+		
+		try {
+			
+			foundReminder = reminderService.findById(theId);
+			
+			if (foundReminder.isPresent()) {
+				reminderToBeDeleted = foundReminder.get();
+			} else {
+				throw new NoSuchElementException();
+			}
+			
+			reminderService.deleteById(theId);
+			
+		} catch (Exception exp) {
+			throw new RuntimeException("Could not delete reminder with ID of " + theId + ". No such reminder was found.");
+		}
+		
+		return "redirect:/reminders/list?currentEventId="+Integer.toString(reminderToBeDeleted.getEvent().getId());
 		
 	}
 }

@@ -21,12 +21,10 @@ public class EventServiceImpl implements EventService {
 	}
 
 	@Override
-	public Event findById(int theId) {
+	public Optional<Event> findById(int theId) {
+		
 		Optional<Event> theEvent = eventRepository.findById(theId);
-		if(theEvent.isEmpty()) {
-			throw new RuntimeException("Did not find event id - " + theId);
-		}
-		return theEvent.get();
+		return theEvent;
 	}
 	
 	@Override
@@ -52,12 +50,14 @@ public class EventServiceImpl implements EventService {
 
 	@Override
 	public void save(Event theEvent) {
+		
 		eventRepository.save(theEvent);
 
 	}
 
 	@Override
 	public void deleteById(int theId) {
+		
 		eventRepository.deleteById(theId);
 
 	}

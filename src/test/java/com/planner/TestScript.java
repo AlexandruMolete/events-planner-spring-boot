@@ -1,6 +1,7 @@
 package com.planner;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Stream;
@@ -30,6 +31,7 @@ public class TestScript {
 		System.out.println(isDateFormatCorrect);
 		int a=0,b=1;
 		System.out.println((b!=0)?Integer.toString(b):""+((a!=0)?Integer.toString(a):""));
+		System.out.println(a);
 	}
-
+	
 }
